@@ -1,9 +1,42 @@
 services:
+  database:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: timelord_user
+      POSTGRES_PASSWORD: timelord_password
+      POSTGRES_DB: timelord_database
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    image: node:20
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    environment:
+      PORT: 3001
+      DATABASE_URL: "postgresql://timelord_user:timelord_password@database:5432/timelord_database"
+    depends_on:
+      - database
+    ports:
+      - "3001:3001"
+      - "5555:5555"
+    command: sh -c "npm install && (npx prisma studio & npm run start:dev)"
+
   frontend:
     image: node:20
     working_dir: /app
     volumes:
       - ./frontend:/app
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+    depends_on:
+      - backend
     ports:
       - "3000:3000"
     command: sh -c "npm install && npm run dev"
+
+volumes:
+  db_data:
